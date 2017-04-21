@@ -1,0 +1,43 @@
+---
+title: "Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+---
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+#devtools::install_github('rstudio/DT')
+library(DT)
+
+datatable(iris)
+```
+
+
+```{r}
+#install.packages("highcharter")
+
+library("highcharter")
+library("magrittr")
+library("dplyr")
+
+data("citytemp")
+citytemp 
+```
+
+### Chart C
+
+```{r}
+hc <- highchart() %>% 
+  hc_add_series(name = "tokyo", data = citytemp$tokyo)
+hc
+```
+
