@@ -1,0 +1,358 @@
+---
+title: "Selecting the Optimal Number of Clusters"
+author: "Rwinters"
+date: "July 3, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+
+```
+```{r}
+
+set.seed(1020)
+
+csize1 <- 1000
+csize2 <- 1000
+csize3 <- 1000
+
+#The "rating' index ratings are ranked from A - E. "A" being the most favorable rating and "E" #being the least favorable. Low ratings will result in higher insurance rates.
+
+pts1 <- data.frame(Claims=rpois(csize1,.6),
+                   Cost=rlnorm(csize1, meanlog=log(9) ,sd=log(3)),
+                   Age=rnorm(csize1, 20 ,20),
+                   Rating=rnorm(csize1, 50 ,30),
+                   cluster=1)
+                   
+pts2 <- data.frame(Claims=rpois(csize2,.4),
+                   Cost=rlnorm(csize2, meanlog=log(7) ,sd=log(2)),
+                   Age=rnorm(csize2, 40 ,20),
+                   Rating=rnorm(csize2, 50 ,20),
+                   cluster=2)
+       
+#older drivers with the safest cars, lowest damage cost                   
+pts3 <- data.frame(Claims=rpois(csize3,.2),
+                   Cost=rlnorm(csize3, meanlog=log(3) ,sd=log(1.5)),
+                   Age=rnorm(csize3, 60 ,20),
+                   Rating=rnorm(csize3, 80 ,15),
+                   cluster=3)
+                   
+
+
+points.matrix <- rbind(pts1,pts2,pts3)
+str(points.matrix)
+```
+
+
+```{r}
+library(RColorBrewer)
+colors <- brewer.pal(5, "Set3") 
+plotit <- function(y,cutoff) {
+x <- density(y[y < cutoff])
+plot(x)
+polygon(x, col=colors, border=colors)
+abline(v = mean(y), col = "gray60")
+return(x)
+}
+par(mfrow=c(2,2))
+plotit(pts1$Cost,max(pts1$Cost)*.253001)
+plotit(pts2$Cost,max(pts1$Cost)*.253001)
+plotit(pts3$Cost,max(pts1$Cost)*.253001)
+
+
+
+
+
+```
+
+
+
+```{r}
+library(dplyr)
+
+set.seed(1020)
+centers <- data.frame(cluster=factor(1:3), 
+                      size=c(100, 100, 100), 
+                      Claims=c(.6, .4, .2),  #number of Claims
+                      Cost=c(9, 7, 6),   #severity
+                      Age=c(20, 40, 60),  #average age
+                      Rating=c(20, 40, 60))  #vehicle rating index A-E
+
+
+#head(centers)
+
+
+points <- centers %>% group_by(cluster) %>%
+    do(data.frame(Claims=rpois(.$size[1], .$Claims[1]),
+                  Cost=rlnorm(.$size[1], .$Cost[1],2),
+                  Age=rnorm(.$size[1], .$Age[1],20),
+                  Rating=rnorm(.$size[1], .$Rating[1],20)
+))
+                  
+points.matrix <- cbind(Claims = points$Claims, Cost = points$Cost, Age = points$Age, Rating = points$Rating) 
+
+
+
+```
+
+
+```{r}
+#aggregate(points.matrix,list(points.matrix$cluster), mean)
+```
+
+
+```{r}
+
+#points.standardized <- cbind(scale(points.matrix[,-5]),points.matrix[,5])
+#without cluster number
+points.standardized <- cbind(scale(points.matrix[,-5]))
+#with cluster
+#kclust <- kmeans(points.standardized[,c(1,2,3,4,5)], 3)
+#without cluster
+kclust <- kmeans(points.standardized[,c(1,2,3,4)], 3)
+
+#remove outliers?
+cutoff.value <- 3
+points.standardized[points.standardized > cutoff.value] <- cutoff.value
+points.standardized[points.standardized < (-1*cutoff.value)] <- (-1*cutoff.value)
+
+#points.df <- as.data.frame(points.standardized)
+#points.df[!x %in% boxplot.stats(x)$out]
+#points.df <- subset(points.df,pointsdfstandardizedutoff.value] <- cutoff.value
+
+
+set.seed(1040)
+
+library(factoextra)
+
+
+
+
+#kclust
+
+rm(axx)
+axx <- fviz_cluster(kclust, data = points.standardized, geom = "point",
+             main = "",
+             xlab="Component 1",ylab="Component 2")
+#head(xx$data)
+axx
+
+
+
+```
+
+
+```{r,pca}
+#http://www.sthda.com/english/wiki/principal-component-analysis-how-to-reveal-the-most-important-variables-in-your-data-r-software-and-data-mining
+
+pca <- prcomp(points.standardized,  scale = TRUE)
+pca
+#fviz_pca_var(pca)
+# Control variable colors using their contributions
+#fviz_pca_var(pca)
+fviz_pca_var(pca, col.var="contrib")+ 
+ scale_color_gradient2(low="white", mid="blue",  high="red") 
+
+fviz_pca_contrib(pca, choice = "var", axes = 1)
+fviz_pca_contrib(pca, choice = "var", axes = 2)
+
+#fviz_pca_biplot(pca)
+
+#fviz_pca_ind(pca, label="none", 
+#     addEllipses=TRUE, ellipse.level=0.95,
+#     palette = c("#999999", "#E69F00", "#56B4E9"))
+
+#library(ggfortify)
+#autoplot(prcomp(points.standardized))
+
+
+```
+
+
+
+```{r}
+#https://cran.r-project.org/web/packages/broom/vignettes/kmeans.html
+#library(ggplot2)
+#ggplot(points, aes(Claims, Cost, Age, color=cluster)) + geom_point()
+
+```
+
+```{r}
+```
+
+```{r}
+library(factoextra)
+axx <- fviz_cluster(kclust, data = points.matrix, geom = "point",
+             main = "",
+             xlab="Component 1",ylab="Component 2")
+#head(xx$data)
+axx
+
+```
+
+
+## R Markdown
+No. The elbow method is an optimization method which tries to select the smallest number of clusters which account for the largest amount of variation in the data. There are at least two other methods which can give you different results (AIC, and silhouette method). If you are more interested in determining the number of clusters which maximize the between cluster variation the silhouette method may be better. In the plot below there looks to be either 2 or three kmeans clusters. The elbow method seems to show that 3 is the ‘break’, but average silhouette width peaks at 2 clusters, probably since it doesn’t see a lot of separation between the green and blue cluster.
+
+However many times these values are close, or one method will have a better interpretation than the other. My suggestion is to not rely on one method, try a few and let the interpretation of the clusters guide you towards your selection.
+
+
+```{r cars}
+#library(NbClust)
+
+iris.standardized <- scale(iris[, -5])
+set.seed(1010)
+
+iris.kmeans <- kmeans(iris.standardized, 3, nstart = 100)
+
+
+#138
+
+#withinss	
+#Vector of within-cluster sum of squares, one component per cluster.
+#tot.withinss	
+#Total within-cluster sum of squares, i.e. sum(withinss).
+
+
+
+iris.kmeans$tot.withinss
+
+```
+
+```{r}
+str(iris.kmeans$centers)
+library(dplyr)
+library(reshape2)
+centroids <- data.frame(iris.kmeans$centers,value=seq(1:max(iris.kmeans$cluster))           )
+names(centroids) <- c("c1","c2","c3","c4","value")
+combine <- cbind(iris.standardized,melt(iris.kmeans$cluster),species=iris[, 5])
+head(combine)
+#merge all the data
+rm(yy   )
+yy <- merge(combine,centroids,by="value")
+attach(yy)
+sum1 <- sum((Sepal.Length-c1)**2) +
+sum((Sepal.Width-c2)**2) +
+sum((Petal.Length-c3)**2) +
+sum((Petal.Width-c4)**2)
+sum1 #138.884  
+#mutate(iris.kmeans$centers)
+
+
+
+```
+
+
+
+```{r pressure, echo=FALSE}
+library(factoextra)
+
+xx <- fviz_cluster(iris.kmeans, data = iris.standardized, geom = "point",
+             main = "Iris 3 clusters",
+             xlab="Component 1",ylab="Component 2")
+#head(xx$data)
+xx
+```
+```{r}
+#try it for kclust
+yy <- fviz_nbclust(points.standardized, kmeans, method = "wss",
+                   print.summary = TRUE) +
+  geom_vline(xintercept = 3, linetype = 3)
+
+#head(yy$data)
+#3 clusters is 138
+plot(yy)
+
+opt_silhouette <- fviz_nbclust(points.standardized, kmeans, 
+                               diss = dist(points.standardized, method = "euclidean"),
+                               method = "silhouette")
+plot(opt_silhouette)
+
+
+
+
+
+```
+
+
+```{r}
+yy <- fviz_nbclust(iris.standardized, kmeans, method = "wss",
+                   print.summary = TRUE) +
+  geom_vline(xintercept = 3, linetype = 3)
+
+head(yy$data)
+#3 clusters is 138
+plot(yy)
+
+
+```
+```{r}
+#how did prediction do?
+table(value,species)
+```
+
+```{r}
+opt_silhouette <- fviz_nbclust(iris.standardized, kmeans, 
+                               diss = dist(iris.standardized, method = "euclidean"),
+                               method = "silhouette")
+plot(opt_silhouette)
+```
+```{r}
+library(cluster)
+
+
+set.seed(1010)
+iris.kmeans <- kmeans(iris.standardized, 3, nstart = 100)
+
+dissE = dist(iris.standardized, method = "euclidean")
+
+dist.matrix <-as.matrix(dissE)
+dist.matrix[1:5,1:5]
+```
+```{r}
+#average distance of 1
+mean(dist.matrix[1,])
+```
+
+
+```{r}
+#For each point p, first find the average distance between p and all other points in the same #cluster (this is a measure of cohesion, call it A). Then find the average distance between p #and all points in the nearest cluster (this is a measure of separation from the closest #other cluster, call it B). The silhouette coefficient for p is defined as the difference #between B and A divided by the greater of the two (max(A,B)).
+
+
+
+dissim.squared <- dissE^1
+silhouette.3 <- silhouette(iris.kmeans$cluster, dissim.squared)
+plot(silhouette.3)
+
+
+```
+
+```{r}
+set.seed(1010)
+iris.kmeans <- kmeans(iris.standardized, 2, nstart = 100)
+centroids <- data.frame(iris.kmeans$centers,value=seq(1:max(iris.kmeans$cluster))           )
+names(centroids) <- c("c1","c2","c3","c4","value")
+combine <- cbind(iris.standardized,melt(iris.kmeans$cluster),species=iris[, 5])
+#merge all the data
+rm(yy   )
+yy <- merge(combine,centroids,by="value")
+
+
+
+silhouette.2 <- silhouette(iris.kmeans$cluster, dissim.squared)
+plot(silhouette.2)
+
+```
+
+```{r}
+attach(yy)
+table(value,species)
+```
+
